@@ -97,13 +97,23 @@ export const registrarUsuario = async (req, res) => {
 
     const data = result.rows[0];
 
-    if (!data || data.mensaje?.toLowerCase().includes("error")) {
-      return res.status(400).json({
+    // El procedimiento siempre devuelve una fila, revisar si el mensaje indica error
+    if (!data) {
+      return res.status(500).json({
         ok: false,
-        msg: data?.mensaje || "Error desconocido en la creación"
+        msg: "No se obtuvo respuesta del procedimiento almacenado"
       });
     }
 
+    // Si el mensaje contiene "Error:", significa que falló
+    if (data.mensaje && data.mensaje.toLowerCase().includes("error")) {
+      return res.status(400).json({
+        ok: false,
+        msg: data.mensaje
+      });
+    }
+
+    // Éxito
     return res.status(201).json({
       ok: true,
       mensaje: data.mensaje,
@@ -114,10 +124,12 @@ export const registrarUsuario = async (req, res) => {
 
   } catch (error) {
     console.error("Error en registrarUsuario:", error);
+    console.error("Stack trace:", error.stack);
     return res.status(500).json({
       ok: false,
       msg: "Error interno del servidor",
-      detalle: error.message
+      detalle: error.message,
+      error: error.toString()
     });
   }
 };
