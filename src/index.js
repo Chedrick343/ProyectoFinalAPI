@@ -5,6 +5,7 @@ import productosRoutes from "./routes/productos.routes.js";
 import citasRoutes from "./routes/citas.route.js";
 import carritoRoutes from "./routes/carrito.route.js";
 import tratamientosRoutes from "./routes/tratamientos.route.js";
+import { initializeRoles } from "./services/role.service.js";
 
 const app = express();
 
@@ -19,7 +20,19 @@ app.use("/citas", citasRoutes);
 app.use("/carrito", carritoRoutes);
 app.use("/tratamientos", tratamientosRoutes);
 
-
+// Inicializar roles al arrancar el servidor
+const initializeApp = async () => {
+  try {
+    console.log("[INIT] Inicializando aplicación...");
+    await initializeRoles();
+    console.log("[INIT] Aplicación inicializada correctamente");
+  } catch (error) {
+    console.error("[INIT] Error al inicializar aplicación:", error);
+  }
+};
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Servidor listo en puerto ${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`🚀 Servidor listo en puerto ${PORT}`);
+  await initializeApp();
+});

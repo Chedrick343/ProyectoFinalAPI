@@ -5,7 +5,8 @@ import {
   solicitarOTP,
   reenviarOTP,
   solicitarOTPCambioPassword,
-  cambiarPasswordConOTP
+  cambiarPasswordConOTP,
+  obtenerRoles
 } from "../controllers/auth.controller.js";
 
 const router = Router();
@@ -16,5 +17,6 @@ router.post("/request-otp", solicitarOTP);
 router.post("/resend-otp", reenviarOTP);
 router.post("/request-password-reset-otp", solicitarOTPCambioPassword);
 router.post("/reset-password", cambiarPasswordConOTP);
+router.get("/roles", obtenerRoles);
 
 export default router;

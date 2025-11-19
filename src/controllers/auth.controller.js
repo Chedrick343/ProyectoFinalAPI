@@ -1,6 +1,7 @@
 import { getConnection } from "../config/db.js";
 import bcrypt from "bcryptjs";
 import { generateOTP, saveOTP, verifyOTP, sendOTPSMS } from "../services/twilio.service.js";
+import { initializeRoles, getRoleIdByName, isFirstUser } from "../services/role.service.js";
 
 // ==========================
 // INICIAR SESIÓN
@@ -82,44 +83,61 @@ export const registrarUsuario = async (req, res) => {
       });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
     const db = getConnection();
 
-    // Ejecutar función de PostgreSQL
-    const query = "SELECT * FROM sp_registroCliente($1, $2, $3, $4, $5);";
-    const result = await db.query(query, [
+    // Inicializar roles si no existen
+    await initializeRoles();
+
+    // Verificar si es el primer usuario
+    const esPrimerUsuario = await isFirstUser();
+    
+    // Determinar el rol: primer usuario = Administrador, resto = Cliente
+    const nombreRol = esPrimerUsuario ? "Administrador" : "Cliente";
+    const idRol = await getRoleIdByName(nombreRol);
+
+    console.log(`[REGISTRO] Registrando usuario como: ${nombreRol} (es primer usuario: ${esPrimerUsuario})`);
+
+    // Verificar si el nombre de usuario ya existe
+    const checkUserQuery = "SELECT idusuario FROM usuario WHERE nombreusuario = $1";
+    const checkResult = await db.query(checkUserQuery, [nombreUsuario]);
+    
+    if (checkResult.rows.length > 0) {
+      return res.status(400).json({
+        ok: false,
+        msg: "El nombre de usuario ya está en uso"
+      });
+    }
+
+    // Hash de la contraseña
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Insertar el usuario con el rol correspondiente
+    const insertQuery = `
+      INSERT INTO usuario (nombre, apellido, telefono, nombreusuario, passwordhash, idrol) 
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING idusuario, nombre, apellido, nombreusuario;
+    `;
+    
+    const insertResult = await db.query(insertQuery, [
       nombre,
       apellido,
       telefono,
       nombreUsuario,
-      passwordHash
+      passwordHash,
+      idRol
     ]);
 
-    const data = result.rows[0];
+    const nuevoUsuario = insertResult.rows[0];
 
-    // El procedimiento siempre devuelve una fila, revisar si el mensaje indica error
-    if (!data) {
-      return res.status(500).json({
-        ok: false,
-        msg: "No se obtuvo respuesta del procedimiento almacenado"
-      });
-    }
-
-    // Si el mensaje contiene "Error:", significa que falló
-    if (data.mensaje && data.mensaje.toLowerCase().includes("error")) {
-      return res.status(400).json({
-        ok: false,
-        msg: data.mensaje
-      });
-    }
+    console.log(`[REGISTRO] Usuario creado exitosamente: ${nuevoUsuario.idusuario} - ${nombreRol}`);
 
     // Éxito
     return res.status(201).json({
       ok: true,
-      mensaje: data.mensaje,
-      usuario: data.usuario,
-      idUsuario: data.idcreado,
-      rol: data.rol
+      mensaje: `Usuario registrado exitosamente como ${nombreRol}`,
+      usuario: nuevoUsuario.nombreusuario,
+      idUsuario: nuevoUsuario.idusuario,
+      rol: nombreRol
     });
 
   } catch (error) {
@@ -365,6 +383,31 @@ export const cambiarPasswordConOTP = async (req, res) => {
 
   } catch (error) {
     console.error("Error en cambiarPasswordConOTP:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Error interno del servidor",
+      detalle: error.message
+    });
+  }
+};
+
+
+// ==========================
+// OBTENER ROLES DISPONIBLES
+// ==========================
+export const obtenerRoles = async (req, res) => {
+  try {
+    const db = getConnection();
+    const query = "SELECT idrol, nombrerol FROM rolusuario ORDER BY nombrerol;";
+    const result = await db.query(query);
+
+    return res.status(200).json({
+      ok: true,
+      roles: result.rows
+    });
+
+  } catch (error) {
+    console.error("Error en obtenerRoles:", error);
     return res.status(500).json({
       ok: false,
       msg: "Error interno del servidor",
