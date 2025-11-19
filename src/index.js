@@ -22,17 +22,17 @@ app.use("/tratamientos", tratamientosRoutes);
 
 // Inicializar roles al arrancar el servidor
 const initializeApp = async () => {
-  try {
-    console.log("[INIT] Inicializando aplicación...");
-    await initializeRoles();
-    console.log("[INIT] Aplicación inicializada correctamente");
-  } catch (error) {
-    console.error("[INIT] Error al inicializar aplicación:", error);
-  }
+    try {
+        console.log("[INIT] Inicializando aplicación...");
+        await initializeRoles();
+        console.log("[INIT] Aplicación inicializada correctamente");
+    } catch (error) {
+        console.error("[INIT] Error al inicializar aplicación:", error);
+    }
 };
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
-  console.log(`🚀 Servidor listo en puerto ${PORT}`);
-  await initializeApp();
+    console.log(`🚀 Servidor listo en puerto ${PORT}`);
+    await initializeApp();
 });

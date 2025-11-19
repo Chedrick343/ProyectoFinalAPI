@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { 
-  iniciarSesion, 
+import {
+  iniciarSesion,
   registrarUsuario,
   solicitarOTP,
   reenviarOTP,

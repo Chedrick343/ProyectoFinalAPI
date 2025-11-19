@@ -90,7 +90,7 @@ export const registrarUsuario = async (req, res) => {
 
     // Verificar si es el primer usuario
     const esPrimerUsuario = await isFirstUser();
-    
+
     // Determinar el rol: primer usuario = Administrador, resto = Cliente
     const nombreRol = esPrimerUsuario ? "Administrador" : "Cliente";
     const idRol = await getRoleIdByName(nombreRol);
@@ -100,7 +100,7 @@ export const registrarUsuario = async (req, res) => {
     // Verificar si el nombre de usuario ya existe
     const checkUserQuery = "SELECT idusuario FROM usuario WHERE nombreusuario = $1";
     const checkResult = await db.query(checkUserQuery, [nombreUsuario]);
-    
+
     if (checkResult.rows.length > 0) {
       return res.status(400).json({
         ok: false,
@@ -117,7 +117,7 @@ export const registrarUsuario = async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING idusuario, nombre, apellido, nombreusuario;
     `;
-    
+
     const insertResult = await db.query(insertQuery, [
       nombre,
       apellido,
@@ -169,14 +169,14 @@ export const solicitarOTP = async (req, res) => {
 
     // Generar OTP
     const otp = generateOTP();
-    
+
     // Guardar en memoria
     saveOTP(telefono, otp, 5);
 
     // Enviar SMS
     try {
       const result = await sendOTPSMS(telefono, otp);
-      
+
       return res.status(200).json({
         ok: true,
         msg: "OTP enviado exitosamente",
@@ -222,14 +222,14 @@ export const reenviarOTP = async (req, res) => {
 
     // Generar nuevo OTP
     const otp = generateOTP();
-    
+
     // Guardar en memoria (sobrescribe el anterior)
     saveOTP(telefono, otp, 5);
 
     // Enviar SMS
     try {
       const result = await sendOTPSMS(telefono, otp);
-      
+
       return res.status(200).json({
         ok: true,
         msg: "OTP reenviado exitosamente",
@@ -295,14 +295,14 @@ export const solicitarOTPCambioPassword = async (req, res) => {
 
     // Generar OTP
     const otp = generateOTP();
-    
+
     // Guardar en memoria
     saveOTP(telefono, otp, 5);
 
     // Enviar SMS
     try {
       const result = await sendOTPSMS(telefono, otp);
-      
+
       return res.status(200).json({
         ok: true,
         msg: "OTP enviado a tu teléfono registrado",
