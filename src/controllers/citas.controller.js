@@ -110,3 +110,189 @@ export const obtenerCitasUsuario = async (req, res) => {
     return res.status(500).json({ ok: false, msg: "Error en servidor", detalle: error.message });
   }
 };
+
+// ============ ADMIN: Gestión de Citas ============
+
+/**
+ * Obtener todas las citas pendientes (estadocita = null o false)
+ */
+export const obtenerCitasPendientes = async (req, res) => {
+  try {
+    const db = getConnection();
+
+    const query = `
+      SELECT 
+        uc.idusuariocita,
+        uc.idusuario,
+        uc.idcita,
+        uc.estadocita,
+        c.idtratamiento,
+        c.horasolicitud,
+        c.fechasolicitud,
+        t.nombretratamiento,
+        t.preciotratamiento,
+        u.nombre,
+        u.apellido,
+        u.telefono
+      FROM usuarioxcita uc
+      INNER JOIN cita c ON uc.idcita = c.idcita
+      INNER JOIN tratamiento t ON c.idtratamiento = t.idtratamiento
+      INNER JOIN usuario u ON uc.idusuario = u.idusuario
+      WHERE uc.estadocita IS NULL OR uc.estadocita = false
+      ORDER BY c.fechasolicitud ASC, c.horasolicitud ASC
+    `;
+    
+    const result = await db.query(query);
+
+    return res.status(200).json({
+      ok: true,
+      data: result.rows
+    });
+
+  } catch (error) {
+    console.error("Error obtenerCitasPendientes:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Error al obtener citas pendientes",
+      detalle: error.message
+    });
+  }
+};
+
+/**
+ * Aprobar una cita (cambiar estadocita a true)
+ */
+export const aprobarCita = async (req, res) => {
+  try {
+    const { idUsuarioCita } = req.params;
+    const db = getConnection();
+
+    const query = `
+      UPDATE usuarioxcita
+      SET estadocita = true
+      WHERE idusuariocita = $1
+      RETURNING idusuariocita, idusuario, idcita, estadocita
+    `;
+    
+    const result = await db.query(query, [idUsuarioCita]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Cita no encontrada"
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      msg: "Cita aprobada exitosamente",
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error("Error aprobarCita:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Error al aprobar la cita",
+      detalle: error.message
+    });
+  }
+};
+
+/**
+ * Rechazar/Cancelar una cita (cambiar estadocita a false)
+ */
+export const rechazarCita = async (req, res) => {
+  try {
+    const { idUsuarioCita } = req.params;
+    const db = getConnection();
+
+    const query = `
+      UPDATE usuarioxcita
+      SET estadocita = false
+      WHERE idusuariocita = $1
+      RETURNING idusuariocita, idusuario, idcita, estadocita
+    `;
+    
+    const result = await db.query(query, [idUsuarioCita]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Cita no encontrada"
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      msg: "Cita rechazada",
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error("Error rechazarCita:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Error al rechazar la cita",
+      detalle: error.message
+    });
+  }
+};
+
+/**
+ * Obtener calendario de citas aprobadas (para vista semanal/mensual)
+ */
+export const obtenerCalendarioCitas = async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+    const db = getConnection();
+
+    let query = `
+      SELECT 
+        uc.idusuariocita,
+        c.idcita,
+        c.horasolicitud,
+        c.fechasolicitud,
+        t.nombretratamiento,
+        t.preciotratamiento,
+        u.nombre,
+        u.apellido,
+        u.telefono
+      FROM usuarioxcita uc
+      INNER JOIN cita c ON uc.idcita = c.idcita
+      INNER JOIN tratamiento t ON c.idtratamiento = t.idtratamiento
+      INNER JOIN usuario u ON uc.idusuario = u.idusuario
+      WHERE uc.estadocita = true
+    `;
+
+    const params = [];
+    
+    if (fechaInicio && fechaFin) {
+      query += ` AND c.fechasolicitud BETWEEN $1 AND $2`;
+      params.push(fechaInicio, fechaFin);
+    } else if (fechaInicio) {
+      query += ` AND c.fechasolicitud >= $1`;
+      params.push(fechaInicio);
+    } else if (fechaFin) {
+      query += ` AND c.fechasolicitud <= $1`;
+      params.push(fechaFin);
+    }
+
+    query += ` ORDER BY c.fechasolicitud ASC, c.horasolicitud ASC`;
+    
+    const result = await db.query(query, params);
+
+    return res.status(200).json({
+      ok: true,
+      data: result.rows
+    });
+
+  } catch (error) {
+    console.error("Error obtenerCalendarioCitas:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Error al obtener calendario de citas",
+      detalle: error.message
+    });
+  }
+};
