@@ -138,3 +138,6 @@ export const vaciarCarrito = async (req, res) => {
     return res.status(500).json({ ok: false, msg: "Error en servidor", detalle: error.message });
   }
 };
+
+
+
