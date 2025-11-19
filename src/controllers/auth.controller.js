@@ -1,6 +1,6 @@
 import { getConnection } from "../config/db.js";
 import bcrypt from "bcryptjs";
-import { generateOTP, saveOTP, verifyOTP, sendOTPSMS } from "../services/twilio.service.js";
+import { generateOTP, saveOTP, verifyOTP, sendOTPSMS } from "../services/otp.service.js";
 import { initializeRoles, getRoleIdByName, isFirstUser } from "../services/role.service.js";
 
 // ==========================

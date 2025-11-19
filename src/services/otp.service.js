@@ -1,13 +1,5 @@
-import twilio from "twilio";
-import dotenv from "dotenv";
-dotenv.config();
-
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
-
-// Almacenamiento temporal de OTPs (en memoria, solo para pruebas)
+// Servicio de OTP sin dependencias externas (Twilio removido)
+// Almacenamiento temporal de OTPs (en memoria)
 const otpStorage = new Map();
 
 /**
@@ -61,30 +53,18 @@ export function verifyOTP(telefono, otp) {
 }
 
 /**
- * Envía un SMS con el código OTP
+ * Simula el envío de SMS retornando el OTP generado
+ * (Para uso en desarrollo sin servicio SMS real)
  * @param {string} telefono - Número de teléfono destino
- * @param {string} otp - Código OTP a enviar
+ * @param {string} otp - Código OTP a "enviar"
  * @returns {Promise}
  */
 export async function sendOTPSMS(telefono, otp) {
-  try {
-    const message = await client.messages.create({
-      body: `Tu código de verificación es: ${otp}. Válido por 5 minutos.`,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: telefono
-    });
-    
-    console.log(`[Twilio] SMS enviado a ${telefono}, SID: ${message.sid}`);
-    return { success: true, sid: message.sid };
-  } catch (error) {
-    console.error(`[Twilio] Error enviando SMS a ${telefono}:`, error.message);
-    
-    // Para pruebas sin Twilio configurado, retornar el OTP en consola
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[DEV MODE] OTP para ${telefono}: ${otp}`);
-      return { success: true, devMode: true, otp };
-    }
-    
-    throw error;
-  }
+  // Simular delay de red
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  console.log(`[OTP SIMULADO] Código para ${telefono}: ${otp}`);
+  
+  // Retornar el OTP para mostrarlo en la app (simulando SMS)
+  return { success: true, devMode: true, otp };
 }
