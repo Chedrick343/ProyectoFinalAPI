@@ -13,11 +13,29 @@ export const actualizarCantidad = async (req, res) => {
 
     const db = getConnection();
 
-    const query = "SELECT * FROM sp_actualizarCantidad($1, $2, $3);";
-    const result = await db.query(query, [idCarrito, idProducto, nuevaCantidad]);
+    // Verificar que el producto existe en el carrito
+    const checkQuery = `
+      SELECT * FROM carritoxproducto 
+      WHERE idcarrito = $1 AND idproducto = $2
+    `;
+    const checkResult = await db.query(checkQuery, [idCarrito, idProducto]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, msg: "Producto no encontrado en el carrito" });
+    }
+
+    // Actualizar la cantidad
+    const updateQuery = `
+      UPDATE carritoxproducto 
+      SET cantidadproducto = $1 
+      WHERE idcarrito = $2 AND idproducto = $3
+      RETURNING *
+    `;
+    const result = await db.query(updateQuery, [nuevaCantidad, idCarrito, idProducto]);
 
     return res.status(200).json({
       ok: true,
+      msg: "Cantidad actualizada",
       data: result.rows[0]
     });
 
@@ -41,13 +59,41 @@ export const agregarACarrito = async (req, res) => {
 
     const db = getConnection();
 
-    const query = "SELECT * FROM sp_agregarACarrito($1, $2, $3);";
-    const result = await db.query(query, [idCarrito, idProducto, cantidad]);
+    // Verificar si el producto ya existe en el carrito
+    const checkQuery = `
+      SELECT * FROM carritoxproducto 
+      WHERE idcarrito = $1 AND idproducto = $2
+    `;
+    const checkResult = await db.query(checkQuery, [idCarrito, idProducto]);
 
-    return res.status(201).json({
-      ok: true,
-      data: result.rows[0]
-    });
+    if (checkResult.rows.length > 0) {
+      // Si ya existe, actualizar cantidad
+      const updateQuery = `
+        UPDATE carritoxproducto 
+        SET cantidadproducto = cantidadproducto + $1 
+        WHERE idcarrito = $2 AND idproducto = $3
+        RETURNING *
+      `;
+      const result = await db.query(updateQuery, [cantidad, idCarrito, idProducto]);
+      return res.status(200).json({
+        ok: true,
+        msg: "Cantidad actualizada",
+        data: result.rows[0]
+      });
+    } else {
+      // Si no existe, insertar nuevo
+      const insertQuery = `
+        INSERT INTO carritoxproducto (idcarrito, idproducto, cantidadproducto)
+        VALUES ($1, $2, $3)
+        RETURNING *
+      `;
+      const result = await db.query(insertQuery, [idCarrito, idProducto, cantidad]);
+      return res.status(201).json({
+        ok: true,
+        msg: "Producto agregado al carrito",
+        data: result.rows[0]
+      });
+    }
 
   } catch (error) {
     console.error("Error agregarACarrito:", error);
@@ -69,12 +115,45 @@ export const obtenerCarritoUsuario = async (req, res) => {
 
     const db = getConnection();
 
-    const query = "SELECT * FROM sp_obtenerCarritoUsuario($1);";
-    const result = await db.query(query, [idUsuario]);
+    // Primero obtener o crear el carrito del usuario
+    let carritoQuery = `
+      SELECT idcarrito FROM carrito WHERE idusuario = $1
+    `;
+    let carritoResult = await db.query(carritoQuery, [idUsuario]);
+
+    if (carritoResult.rows.length === 0) {
+      // Crear carrito si no existe
+      const createCarritoQuery = `
+        INSERT INTO carrito (idusuario) 
+        VALUES ($1) 
+        RETURNING idcarrito
+      `;
+      carritoResult = await db.query(createCarritoQuery, [idUsuario]);
+    }
+
+    const idCarrito = carritoResult.rows[0].idcarrito;
+
+    // Obtener productos del carrito con JOIN
+    const query = `
+      SELECT 
+        p.idproducto,
+        p.nombreproducto,
+        p.descripcionproducto,
+        p.precioproducto,
+        p.cantidadstock,
+        p.imagenurl,
+        cp.cantidadproducto,
+        cp.idcarritoxproducto
+      FROM carritoxproducto cp
+      INNER JOIN producto p ON cp.idproducto = p.idproducto
+      WHERE cp.idcarrito = $1
+      ORDER BY cp.idcarritoxproducto DESC
+    `;
+    const result = await db.query(query, [idCarrito]);
 
     return res.status(200).json({
       ok: true,
-      data: result.rows  // devuelve lista
+      data: result.rows
     });
 
   } catch (error) {
@@ -97,11 +176,20 @@ export const quitarDeCarrito = async (req, res) => {
 
     const db = getConnection();
 
-    const query = "SELECT * FROM sp_quitarDeCarrito($1, $2);";
+    const query = `
+      DELETE FROM carritoxproducto 
+      WHERE idcarrito = $1 AND idproducto = $2
+      RETURNING *
+    `;
     const result = await db.query(query, [idCarrito, idProducto]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ ok: false, msg: "Producto no encontrado en el carrito" });
+    }
 
     return res.status(200).json({
       ok: true,
+      msg: "Producto eliminado del carrito",
       data: result.rows[0]
     });
 
@@ -125,12 +213,17 @@ export const vaciarCarrito = async (req, res) => {
 
     const db = getConnection();
 
-    const query = "SELECT * FROM sp_vaciarCarrito($1);";
+    const query = `
+      DELETE FROM carritoxproducto 
+      WHERE idcarrito = $1
+      RETURNING *
+    `;
     const result = await db.query(query, [idCarrito]);
 
     return res.status(200).json({
       ok: true,
-      data: result.rows[0]
+      msg: "Carrito vaciado",
+      data: { itemsEliminados: result.rowCount }
     });
 
   } catch (error) {
