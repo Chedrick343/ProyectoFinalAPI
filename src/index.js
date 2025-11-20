@@ -5,6 +5,7 @@ import productosRoutes from "./routes/productos.routes.js";
 import citasRoutes from "./routes/citas.route.js";
 import carritoRoutes from "./routes/carrito.route.js";
 import tratamientosRoutes from "./routes/tratamientos.route.js";
+import uploadRoutes from "./routes/upload.route.js";
 import { initializeRoles } from "./services/role.service.js";
 
 const app = express();
@@ -19,6 +20,7 @@ app.use("/productos", productosRoutes);
 app.use("/citas", citasRoutes);
 app.use("/carrito", carritoRoutes);
 app.use("/tratamientos", tratamientosRoutes);
+app.use("/upload", uploadRoutes);
 
 // Inicializar roles al arrancar el servidor
 const initializeApp = async () => {
