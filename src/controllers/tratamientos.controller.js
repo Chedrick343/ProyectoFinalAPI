@@ -22,7 +22,7 @@ export const obtenerTratamientos = async (req, res) => {
       LEFT JOIN tipotratamiento tt ON t.idtipotratamiento = tt.idtipotratamiento
       ORDER BY tt.nombretipo ASC, t.nombretratamiento ASC
     `;
-    
+
     const result = await db.query(query);
 
     return res.status(200).json({
@@ -174,7 +174,7 @@ export const obtenerCategoriasConTratamientos = async (req, res) => {
       FROM tipotratamiento
       ORDER BY nombretipo ASC
     `;
-    
+
     const categoriasResult = await db.query(categoriasQuery);
 
     // Para cada categoría, obtenemos sus tratamientos
@@ -192,9 +192,9 @@ export const obtenerCategoriasConTratamientos = async (req, res) => {
           WHERE idtipotratamiento = $1
           ORDER BY nombretratamiento ASC
         `;
-        
+
         const tratamientosResult = await db.query(tratamientosQuery, [categoria.idtipotratamiento]);
-        
+
         return {
           idtipotratamiento: categoria.idtipotratamiento,
           nombretipo: categoria.nombretipo,

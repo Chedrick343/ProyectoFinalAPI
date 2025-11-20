@@ -97,7 +97,7 @@ export const obtenerCitasUsuario = async (req, res) => {
     }
 
     const db = getConnection();
-    
+
     // SELECT personalizado sin stored procedure
     const query = `
       SELECT 
@@ -120,7 +120,7 @@ export const obtenerCitasUsuario = async (req, res) => {
       WHERE uc.idusuario = $1
       ORDER BY c.fechasolicitud DESC, c.horasolicitud DESC
     `;
-    
+
     const result = await db.query(query, [idUsuario]);
 
     return res.status(200).json({

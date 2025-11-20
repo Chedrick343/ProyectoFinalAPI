@@ -431,7 +431,7 @@ export const obtenerPerfil = async (req, res) => {
     }
 
     const db = getConnection();
-    
+
     // SELECT directo sin stored procedure
     const query = `
       SELECT 
@@ -445,7 +445,7 @@ export const obtenerPerfil = async (req, res) => {
       LEFT JOIN rolusuario r ON u.idrol = r.idrol
       WHERE u.idusuario = $1
     `;
-    
+
     const result = await db.query(query, [idUsuario]);
 
     if (result.rows.length === 0) {
