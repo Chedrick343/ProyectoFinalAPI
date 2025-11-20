@@ -14,11 +14,11 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use("/auth", authRoutes);
-app.use("/productos", productosRoutes);
-app.use("/citas", citasRoutes);
-app.use("/carrito", carritoRoutes);
-app.use("/tratamientos", tratamientosRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/productos", productosRoutes);
+app.use("/api/citas", citasRoutes);
+app.use("/api/carrito", carritoRoutes);
+app.use("/api/tratamientos", tratamientosRoutes);
 
 // Inicializar roles al arrancar el servidor
 const initializeApp = async () => {
