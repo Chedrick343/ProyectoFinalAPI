@@ -7,8 +7,22 @@ export const obtenerTratamientos = async (req, res) => {
   try {
     const db = getConnection();
 
-    // Llamamos la función de PostgreSQL que retorna tratamiento + tipo
-    const query = "SELECT * FROM sp_obtenerTratamientosConTipo();";
+    // SELECT personalizado sin stored procedure
+    const query = `
+      SELECT 
+        t.idtratamiento,
+        t.nombretratamiento,
+        t.descripciontratamiento,
+        t.preciotratamiento,
+        t.duracion,
+        t.imagenurl,
+        t.idtipotratamiento,
+        tt.nombretipo
+      FROM tratamiento t
+      LEFT JOIN tipotratamiento tt ON t.idtipotratamiento = tt.idtipotratamiento
+      ORDER BY tt.nombretipo ASC, t.nombretratamiento ASC
+    `;
+    
     const result = await db.query(query);
 
     return res.status(200).json({
@@ -140,6 +154,65 @@ export const obtenerDetalleTratamiento = async (req, res) => {
     return res.status(500).json({
       ok: false,
       msg: "Error al obtener detalle del tratamiento",
+      detalle: error.message
+    });
+  }
+};
+
+/**
+ * Obtiene categorías con sus tratamientos asociados (para carrusel)
+ */
+export const obtenerCategoriasConTratamientos = async (req, res) => {
+  try {
+    const db = getConnection();
+
+    // Primero obtenemos todas las categorías
+    const categoriasQuery = `
+      SELECT 
+        idtipotratamiento,
+        nombretipo
+      FROM tipotratamiento
+      ORDER BY nombretipo ASC
+    `;
+    
+    const categoriasResult = await db.query(categoriasQuery);
+
+    // Para cada categoría, obtenemos sus tratamientos
+    const categoriasConTratamientos = await Promise.all(
+      categoriasResult.rows.map(async (categoria) => {
+        const tratamientosQuery = `
+          SELECT 
+            idtratamiento,
+            nombretratamiento,
+            descripciontratamiento,
+            preciotratamiento,
+            duracion,
+            imagenurl
+          FROM tratamiento
+          WHERE idtipotratamiento = $1
+          ORDER BY nombretratamiento ASC
+        `;
+        
+        const tratamientosResult = await db.query(tratamientosQuery, [categoria.idtipotratamiento]);
+        
+        return {
+          idtipotratamiento: categoria.idtipotratamiento,
+          nombretipo: categoria.nombretipo,
+          tratamientos: tratamientosResult.rows
+        };
+      })
+    );
+
+    return res.status(200).json({
+      ok: true,
+      data: categoriasConTratamientos
+    });
+
+  } catch (error) {
+    console.error("Error obtenerCategoriasConTratamientos:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Error al obtener categorías con tratamientos",
       detalle: error.message
     });
   }

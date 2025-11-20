@@ -4,6 +4,7 @@ import {
     obtenerTiposTratamiento,
     obtenerTratamientosPorTipo,
     obtenerDetalleTratamiento,
+    obtenerCategoriasConTratamientos,
     crearCategoria,
     actualizarCategoria,
     eliminarCategoria,
@@ -21,6 +22,9 @@ router.get("/", obtenerTratamientos);
 
 // Obtener todos los tipos/categorías de tratamiento
 router.get("/tipos", obtenerTiposTratamiento);
+
+// Obtener categorías con sus tratamientos (para carrusel)
+router.get("/categorias-con-tratamientos", obtenerCategoriasConTratamientos);
 
 // Obtener tratamientos por tipo/categoría
 router.get("/tipo/:idTipo", obtenerTratamientosPorTipo);

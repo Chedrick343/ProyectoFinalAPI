@@ -97,7 +97,30 @@ export const obtenerCitasUsuario = async (req, res) => {
     }
 
     const db = getConnection();
-    const query = "SELECT * FROM sp_obtenerCitasUsuario($1);";
+    
+    // SELECT personalizado sin stored procedure
+    const query = `
+      SELECT 
+        uc.idusuariocita,
+        c.idcita,
+        c.horasolicitud,
+        c.fechasolicitud,
+        uc.estadocita,
+        t.idtratamiento,
+        t.nombretratamiento,
+        t.descripciontratamiento,
+        t.preciotratamiento,
+        t.duracion,
+        t.imagenurl,
+        tt.nombretipo as categoria
+      FROM usuarioxcita uc
+      INNER JOIN cita c ON uc.idcita = c.idcita
+      INNER JOIN tratamiento t ON c.idtratamiento = t.idtratamiento
+      LEFT JOIN tipotratamiento tt ON t.idtipotratamiento = tt.idtipotratamiento
+      WHERE uc.idusuario = $1
+      ORDER BY c.fechasolicitud DESC, c.horasolicitud DESC
+    `;
+    
     const result = await db.query(query, [idUsuario]);
 
     return res.status(200).json({

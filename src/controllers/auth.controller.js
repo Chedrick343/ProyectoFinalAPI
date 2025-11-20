@@ -415,3 +415,57 @@ export const obtenerRoles = async (req, res) => {
     });
   }
 };
+
+// ==========================
+// OBTENER PERFIL DE USUARIO
+// ==========================
+export const obtenerPerfil = async (req, res) => {
+  try {
+    const { idUsuario } = req.params;
+
+    if (!idUsuario) {
+      return res.status(400).json({
+        ok: false,
+        msg: "El ID de usuario es obligatorio"
+      });
+    }
+
+    const db = getConnection();
+    
+    // SELECT directo sin stored procedure
+    const query = `
+      SELECT 
+        u.idusuario,
+        u.nombre,
+        u.apellido,
+        u.telefono,
+        u.nombreusuario,
+        r.nombrerol as rol
+      FROM usuario u
+      LEFT JOIN rolusuario r ON u.idrol = r.idrol
+      WHERE u.idusuario = $1
+    `;
+    
+    const result = await db.query(query, [idUsuario]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Usuario no encontrado"
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error("Error en obtenerPerfil:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Error interno del servidor",
+      detalle: error.message
+    });
+  }
+};
