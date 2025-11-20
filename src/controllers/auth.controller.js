@@ -10,7 +10,10 @@ export const iniciarSesion = async (req, res) => {
   const { nombreUsuario, password } = req.body;
 
   try {
+    console.log("[iniciarSesion] Request received for user:", nombreUsuario);
+    
     if (!nombreUsuario || !password) {
+      console.log("[iniciarSesion] Missing credentials");
       return res.status(400).json({
         ok: false,
         msg: "Nombre de usuario y contraseña son obligatorios"
@@ -18,15 +21,19 @@ export const iniciarSesion = async (req, res) => {
     }
 
     const db = getConnection();   // Obtenemos el pool
+    console.log("[iniciarSesion] Database connection obtained");
 
     // Ejecutar función de PostgreSQL
     const query = "SELECT * FROM sp_iniciarSesion($1);";
+    console.log("[iniciarSesion] Executing query:", query, "with user:", nombreUsuario);
     const result = await db.query(query, [nombreUsuario]);
+    console.log("[iniciarSesion] Query result rows:", result.rows.length);
 
     const data = result.rows[0];
 
     // Validación
     if (!data || !data.idusuario || !data.passwordhash) {
+      console.log("[iniciarSesion] User not found or invalid data");
       return res.status(401).json({
         ok: false,
         msg: "Credenciales incorrectas"
@@ -34,8 +41,10 @@ export const iniciarSesion = async (req, res) => {
     }
 
     // Verificación de contraseña
+    console.log("[iniciarSesion] Verifying password");
     const passwordValida = await bcrypt.compare(password, data.passwordhash);
     if (!passwordValida) {
+      console.log("[iniciarSesion] Invalid password");
       return res.status(401).json({
         ok: false,
         msg: "Credenciales incorrectas"
@@ -43,6 +52,7 @@ export const iniciarSesion = async (req, res) => {
     }
 
     // Éxito
+    console.log("[iniciarSesion] Login successful for user:", data.idusuario);
     return res.status(200).json({
       ok: true,
       idUsuario: data.idusuario,

@@ -110,7 +110,6 @@ export const obtenerCitasUsuario = async (req, res) => {
         t.nombretratamiento,
         t.descripciontratamiento,
         t.preciotratamiento,
-        t.duracion,
         t.imagenurl,
         tt.nombretipo as categoria
       FROM usuarioxcita uc

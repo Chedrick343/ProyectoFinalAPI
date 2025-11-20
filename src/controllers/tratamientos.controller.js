@@ -14,7 +14,6 @@ export const obtenerTratamientos = async (req, res) => {
         t.nombretratamiento,
         t.descripciontratamiento,
         t.preciotratamiento,
-        t.duracion,
         t.imagenurl,
         t.idtipotratamiento,
         tt.nombretipo
@@ -186,7 +185,6 @@ export const obtenerCategoriasConTratamientos = async (req, res) => {
             nombretratamiento,
             descripciontratamiento,
             preciotratamiento,
-            duracion,
             imagenurl
           FROM tratamiento
           WHERE idtipotratamiento = $1
