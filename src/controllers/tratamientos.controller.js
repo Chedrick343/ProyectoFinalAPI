@@ -164,7 +164,7 @@ export const crearCategoria = async (req, res) => {
         msg: "El nombre de la categoría es requerido"
       });
     }
-    
+
     console.log("[crearCategoria] Intentando insertar:", nombreTipo.trim());
 
     const insertQuery = `
@@ -177,7 +177,7 @@ export const crearCategoria = async (req, res) => {
       nombreTipo.trim()]);
 
     console.log("[crearCategoria] Resultado exitoso:", JSON.stringify(result.rows[0]));
-    
+
     return res.status(201).json({
       ok: true,
       msg: "Categoría creada exitosamente",
