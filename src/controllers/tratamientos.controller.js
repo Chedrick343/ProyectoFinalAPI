@@ -162,13 +162,14 @@ export const crearCategoria = async (req, res) => {
       });
     }
 
-    const query = `
+    const insertQuery = `
       INSERT INTO tipotratamiento (nombretipo)
       VALUES ($1)
       RETURNING idtipotratamiento, nombretipo
     `;
 
-    const result = await db.query(query, [nombreTipo.trim()]);
+    const result = await db.query(insertQuery, [
+      nombreTipo.trim()]);
 
     return res.status(201).json({
       ok: true,
