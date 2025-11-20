@@ -163,8 +163,8 @@ export const crearCategoria = async (req, res) => {
     }
 
     const query = `
-      INSERT INTO tipotratamiento (nombretipo)
-      VALUES ($1)
+      INSERT INTO tipotratamiento (idtipotratamiento, nombretipo)
+      VALUES (uuid_generate_v4(), $1)
       RETURNING idtipotratamiento, nombretipo
     `;
 
