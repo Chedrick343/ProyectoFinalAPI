@@ -41,7 +41,7 @@ export const obtenerTiposTratamiento = async (req, res) => {
       FROM tipotratamiento tt
       ORDER BY nombretipo ASC
     `;
-    
+
     const result = await db.query(query);
 
     return res.status(200).json({
@@ -81,7 +81,7 @@ export const obtenerTratamientosPorTipo = async (req, res) => {
       WHERE t.idtipotratamiento = $1
       ORDER BY t.nombretratamiento ASC
     `;
-    
+
     const result = await db.query(query, [idTipo]);
 
     return res.status(200).json({
@@ -120,7 +120,7 @@ export const obtenerDetalleTratamiento = async (req, res) => {
       INNER JOIN tipotratamiento tt ON t.idtipotratamiento = tt.idtipotratamiento
       WHERE t.idtratamiento = $1
     `;
-    
+
     const result = await db.query(query, [idTratamiento]);
 
     if (result.rows.length === 0) {
@@ -167,7 +167,7 @@ export const crearCategoria = async (req, res) => {
       VALUES ($1)
       RETURNING idtipotratamiento, nombretipo
     `;
-    
+
     const result = await db.query(query, [nombreTipo.trim()]);
 
     return res.status(201).json({
@@ -178,16 +178,21 @@ export const crearCategoria = async (req, res) => {
 
   } catch (error) {
     console.error("Error crearCategoria:", error);
+    console.error("Error code:", error.code);
+    console.error("Error detail:", error.detail);
+
     if (error.code === '23505') { // Unique violation
       return res.status(409).json({
         ok: false,
         msg: "Ya existe una categoría con ese nombre"
       });
     }
+
     return res.status(500).json({
       ok: false,
       msg: "Error al crear la categoría",
-      detalle: error.message
+      error: error.message,
+      code: error.code
     });
   }
 };
@@ -214,7 +219,7 @@ export const actualizarCategoria = async (req, res) => {
       WHERE idtipotratamiento = $2
       RETURNING idtipotratamiento, nombretipo
     `;
-    
+
     const result = await db.query(query, [nombreTipo.trim(), idCategoria]);
 
     if (result.rows.length === 0) {
@@ -274,7 +279,7 @@ export const eliminarCategoria = async (req, res) => {
       WHERE idtipotratamiento = $1
       RETURNING idtipotratamiento, nombretipo
     `;
-    
+
     const result = await db.query(deleteQuery, [idCategoria]);
 
     if (result.rows.length === 0) {
@@ -337,7 +342,7 @@ export const crearTratamiento = async (req, res) => {
       VALUES ($1, $2, $3, $4, $5)
       RETURNING idtratamiento, nombretratamiento, descripciontratamiento, preciotratamiento, imagenurl, idtipotratamiento
     `;
-    
+
     const result = await db.query(query, [
       nombreTratamiento.trim(),
       descripcionTratamiento?.trim() || null,
@@ -414,7 +419,7 @@ export const actualizarTratamiento = async (req, res) => {
       WHERE idtratamiento = $6
       RETURNING idtratamiento, nombretratamiento, descripciontratamiento, preciotratamiento, imagenurl, idtipotratamiento
     `;
-    
+
     const result = await db.query(query, [
       nombreTratamiento.trim(),
       descripcionTratamiento?.trim() || null,
@@ -472,7 +477,7 @@ export const eliminarTratamiento = async (req, res) => {
       WHERE idtratamiento = $1
       RETURNING idtratamiento, nombretratamiento
     `;
-    
+
     const result = await db.query(deleteQuery, [idTratamiento]);
 
     if (result.rows.length === 0) {

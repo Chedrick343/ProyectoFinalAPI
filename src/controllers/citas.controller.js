@@ -67,7 +67,7 @@ export const obtenerCitas = async (req, res) => {
 
   try {
     const db = getConnection();
-    
+
     const query = "SELECT * FROM sp_obtenerCitas($1);";
     const result = await db.query(query, [
       estadoCita === undefined ? null : estadoCita
@@ -141,7 +141,7 @@ export const obtenerCitasPendientes = async (req, res) => {
       WHERE uc.estadocita IS NULL OR uc.estadocita = false
       ORDER BY c.fechasolicitud ASC, c.horasolicitud ASC
     `;
-    
+
     const result = await db.query(query);
 
     return res.status(200).json({
@@ -173,7 +173,7 @@ export const aprobarCita = async (req, res) => {
       WHERE idusuariocita = $1
       RETURNING idusuariocita, idusuario, idcita, estadocita
     `;
-    
+
     const result = await db.query(query, [idUsuarioCita]);
 
     if (result.rows.length === 0) {
@@ -213,7 +213,7 @@ export const rechazarCita = async (req, res) => {
       WHERE idusuariocita = $1
       RETURNING idusuariocita, idusuario, idcita, estadocita
     `;
-    
+
     const result = await db.query(query, [idUsuarioCita]);
 
     if (result.rows.length === 0) {
@@ -266,7 +266,7 @@ export const obtenerCalendarioCitas = async (req, res) => {
     `;
 
     const params = [];
-    
+
     if (fechaInicio && fechaFin) {
       query += ` AND c.fechasolicitud BETWEEN $1 AND $2`;
       params.push(fechaInicio, fechaFin);
@@ -279,7 +279,7 @@ export const obtenerCalendarioCitas = async (req, res) => {
     }
 
     query += ` ORDER BY c.fechasolicitud ASC, c.horasolicitud ASC`;
-    
+
     const result = await db.query(query, params);
 
     return res.status(200).json({

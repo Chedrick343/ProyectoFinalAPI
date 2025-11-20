@@ -1,15 +1,15 @@
 import { Router } from "express";
-import { 
-  obtenerTratamientos,
-  obtenerTiposTratamiento,
-  obtenerTratamientosPorTipo,
-  obtenerDetalleTratamiento,
-  crearCategoria,
-  actualizarCategoria,
-  eliminarCategoria,
-  crearTratamiento,
-  actualizarTratamiento,
-  eliminarTratamiento
+import {
+    obtenerTratamientos,
+    obtenerTiposTratamiento,
+    obtenerTratamientosPorTipo,
+    obtenerDetalleTratamiento,
+    crearCategoria,
+    actualizarCategoria,
+    eliminarCategoria,
+    crearTratamiento,
+    actualizarTratamiento,
+    eliminarTratamiento
 } from "../controllers/tratamientos.controller.js";
 
 const router = Router();

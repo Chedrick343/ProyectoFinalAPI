@@ -45,7 +45,7 @@ export const obtenerDetalleProducto = async (req, res) => {
       FROM producto
       WHERE idproducto = $1
     `;
-    
+
     const result = await db.query(query, [idProducto]);
 
     if (result.rows.length === 0) {
@@ -107,7 +107,7 @@ export const crearProducto = async (req, res) => {
       VALUES ($1, $2, $3, $4, $5)
       RETURNING idproducto, nombreproducto, descripcionproducto, precioproducto, cantidadstock, imagenurl
     `;
-    
+
     const result = await db.query(query, [
       nombreProducto.trim(),
       descripcionProducto?.trim() || null,
@@ -178,7 +178,7 @@ export const actualizarProducto = async (req, res) => {
       WHERE idproducto = $6
       RETURNING idproducto, nombreproducto, descripcionproducto, precioproducto, cantidadstock, imagenurl
     `;
-    
+
     const result = await db.query(query, [
       nombreProducto.trim(),
       descripcionProducto?.trim() || null,
@@ -230,7 +230,7 @@ export const eliminarProducto = async (req, res) => {
       WHERE idproducto = $1
       RETURNING idproducto, nombreproducto
     `;
-    
+
     const result = await db.query(deleteQuery, [idProducto]);
 
     if (result.rows.length === 0) {
