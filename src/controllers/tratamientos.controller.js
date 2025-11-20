@@ -152,15 +152,20 @@ export const obtenerDetalleTratamiento = async (req, res) => {
  */
 export const crearCategoria = async (req, res) => {
   try {
+    console.log("[crearCategoria] Body recibido:", JSON.stringify(req.body));
     const { nombreTipo } = req.body;
+    console.log("[crearCategoria] nombreTipo extraído:", nombreTipo);
     const db = getConnection();
 
     if (!nombreTipo || nombreTipo.trim() === '') {
+      console.log("[crearCategoria] Validación falló: nombreTipo vacío o undefined");
       return res.status(400).json({
         ok: false,
         msg: "El nombre de la categoría es requerido"
       });
     }
+    
+    console.log("[crearCategoria] Intentando insertar:", nombreTipo.trim());
 
     const insertQuery = `
       INSERT INTO tipotratamiento (nombretipo)
@@ -171,6 +176,8 @@ export const crearCategoria = async (req, res) => {
     const result = await db.query(insertQuery, [
       nombreTipo.trim()]);
 
+    console.log("[crearCategoria] Resultado exitoso:", JSON.stringify(result.rows[0]));
+    
     return res.status(201).json({
       ok: true,
       msg: "Categoría creada exitosamente",
@@ -178,9 +185,11 @@ export const crearCategoria = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error crearCategoria:", error);
-    console.error("Error code:", error.code);
-    console.error("Error detail:", error.detail);
+    console.error("[crearCategoria] ERROR CAPTURADO:", error);
+    console.error("[crearCategoria] Error message:", error.message);
+    console.error("[crearCategoria] Error code:", error.code);
+    console.error("[crearCategoria] Error detail:", error.detail);
+    console.error("[crearCategoria] Stack trace:", error.stack);
 
     if (error.code === '23505') { // Unique violation
       return res.status(409).json({
@@ -193,7 +202,8 @@ export const crearCategoria = async (req, res) => {
       ok: false,
       msg: "Error al crear la categoría",
       error: error.message,
-      code: error.code
+      code: error.code,
+      detalle: error.toString()
     });
   }
 };
