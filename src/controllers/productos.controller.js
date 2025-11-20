@@ -7,8 +7,18 @@ export const obtenerProductos = async (req, res) => {
   try {
     const db = getConnection();
 
-    // Ejecuta función PostgreSQL
-    const query = "SELECT * FROM sp_obtenerProductos();";
+    // Query directo sin función
+    const query = `
+      SELECT 
+        idproducto,
+        nombreproducto,
+        descripcionproducto,
+        precioproducto,
+        cantidadstock,
+        imagenurl
+      FROM producto
+      ORDER BY nombreproducto ASC
+    `;
     const result = await db.query(query);
 
     return res.status(200).json({
