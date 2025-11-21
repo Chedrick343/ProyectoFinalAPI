@@ -59,12 +59,35 @@ export const agregarACarrito = async (req, res) => {
 
     const db = getConnection();
 
+    // Primero verificar/crear el carrito del usuario
+    // El idCarrito que llega puede ser el userId
+    let carritoId = idCarrito;
+    
+    // Intentar obtener el carrito
+    const getCarritoQuery = `
+      SELECT idcarrito FROM carrito WHERE idusuario = $1
+    `;
+    let carritoResult = await db.query(getCarritoQuery, [idCarrito]);
+    
+    if (carritoResult.rows.length === 0) {
+      // Crear carrito si no existe
+      const createCarritoQuery = `
+        INSERT INTO carrito (idusuario) 
+        VALUES ($1) 
+        RETURNING idcarrito
+      `;
+      carritoResult = await db.query(createCarritoQuery, [idCarrito]);
+      carritoId = carritoResult.rows[0].idcarrito;
+    } else {
+      carritoId = carritoResult.rows[0].idcarrito;
+    }
+
     // Verificar si el producto ya existe en el carrito
     const checkQuery = `
       SELECT * FROM carritoxproducto 
       WHERE idcarrito = $1 AND idproducto = $2
     `;
-    const checkResult = await db.query(checkQuery, [idCarrito, idProducto]);
+    const checkResult = await db.query(checkQuery, [carritoId, idProducto]);
 
     if (checkResult.rows.length > 0) {
       // Si ya existe, actualizar cantidad
@@ -74,7 +97,7 @@ export const agregarACarrito = async (req, res) => {
         WHERE idcarrito = $2 AND idproducto = $3
         RETURNING *
       `;
-      const result = await db.query(updateQuery, [cantidad, idCarrito, idProducto]);
+      const result = await db.query(updateQuery, [cantidad, carritoId, idProducto]);
       return res.status(200).json({
         ok: true,
         msg: "Cantidad actualizada",
@@ -87,7 +110,7 @@ export const agregarACarrito = async (req, res) => {
         VALUES ($1, $2, $3)
         RETURNING *
       `;
-      const result = await db.query(insertQuery, [idCarrito, idProducto, cantidad]);
+      const result = await db.query(insertQuery, [carritoId, idProducto, cantidad]);
       return res.status(201).json({
         ok: true,
         msg: "Producto agregado al carrito",
