@@ -53,33 +53,40 @@ export const agregarACarrito = async (req, res) => {
   const { idCarrito, idProducto, cantidad } = req.body;
 
   try {
+    console.log("📦 agregarACarrito - Datos recibidos:", { idCarrito, idProducto, cantidad });
+
     if (!idCarrito || !idProducto || !cantidad) {
+      console.log("❌ Datos incompletos");
       return res.status(400).json({ ok: false, msg: "Datos incompletos" });
     }
 
     const db = getConnection();
 
-    // Primero verificar/crear el carrito del usuario
-    // El idCarrito que llega puede ser el userId
-    let carritoId = idCarrito;
+    // El idCarrito que llega es en realidad el userId
+    const userId = idCarrito;
+    let carritoId = null;
     
-    // Intentar obtener el carrito
+    // Intentar obtener el carrito del usuario
     const getCarritoQuery = `
       SELECT idcarrito FROM carrito WHERE idusuario = $1
     `;
-    let carritoResult = await db.query(getCarritoQuery, [idCarrito]);
+    console.log("🔍 Buscando carrito para usuario:", userId);
+    let carritoResult = await db.query(getCarritoQuery, [userId]);
     
     if (carritoResult.rows.length === 0) {
+      console.log("➕ Carrito no existe, creando nuevo...");
       // Crear carrito si no existe
       const createCarritoQuery = `
         INSERT INTO carrito (idusuario) 
         VALUES ($1) 
         RETURNING idcarrito
       `;
-      carritoResult = await db.query(createCarritoQuery, [idCarrito]);
+      carritoResult = await db.query(createCarritoQuery, [userId]);
       carritoId = carritoResult.rows[0].idcarrito;
+      console.log("✅ Carrito creado con ID:", carritoId);
     } else {
       carritoId = carritoResult.rows[0].idcarrito;
+      console.log("✅ Carrito encontrado con ID:", carritoId);
     }
 
     // Verificar si el producto ya existe en el carrito
@@ -87,9 +94,11 @@ export const agregarACarrito = async (req, res) => {
       SELECT * FROM carritoxproducto 
       WHERE idcarrito = $1 AND idproducto = $2
     `;
+    console.log("🔍 Verificando si producto ya existe en carrito...");
     const checkResult = await db.query(checkQuery, [carritoId, idProducto]);
 
     if (checkResult.rows.length > 0) {
+      console.log("📝 Producto existe, actualizando cantidad...");
       // Si ya existe, actualizar cantidad
       const updateQuery = `
         UPDATE carritoxproducto 
@@ -98,12 +107,14 @@ export const agregarACarrito = async (req, res) => {
         RETURNING *
       `;
       const result = await db.query(updateQuery, [cantidad, carritoId, idProducto]);
+      console.log("✅ Cantidad actualizada:", result.rows[0]);
       return res.status(200).json({
         ok: true,
         msg: "Cantidad actualizada",
         data: result.rows[0]
       });
     } else {
+      console.log("➕ Producto nuevo, insertando...");
       // Si no existe, insertar nuevo
       const insertQuery = `
         INSERT INTO carritoxproducto (idcarrito, idproducto, cantidadproducto)
@@ -111,6 +122,7 @@ export const agregarACarrito = async (req, res) => {
         RETURNING *
       `;
       const result = await db.query(insertQuery, [carritoId, idProducto, cantidad]);
+      console.log("✅ Producto agregado:", result.rows[0]);
       return res.status(201).json({
         ok: true,
         msg: "Producto agregado al carrito",
@@ -119,8 +131,14 @@ export const agregarACarrito = async (req, res) => {
     }
 
   } catch (error) {
-    console.error("Error agregarACarrito:", error);
-    return res.status(500).json({ ok: false, msg: "Error en servidor", detalle: error.message });
+    console.error("❌ Error agregarACarrito:", error);
+    console.error("Stack trace:", error.stack);
+    return res.status(500).json({ 
+      ok: false, 
+      msg: "Error en servidor", 
+      detalle: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
