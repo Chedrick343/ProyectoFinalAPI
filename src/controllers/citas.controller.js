@@ -12,11 +12,24 @@ export const cambiarEstadoCita = async (req, res) => {
     }
 
     const db = getConnection();
-    const query = "SELECT * FROM sp_cambiarEstadoCita($1, $2);";
+    
+    // Query directa para actualizar el estado
+    const query = `
+      UPDATE usuarioxcita
+      SET estadocita = $2
+      WHERE idcita = $1
+      RETURNING idusuariocita, idusuario, idcita, estadocita
+    `;
+    
     const result = await db.query(query, [idCita, nuevoEstado]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ ok: false, msg: "Cita no encontrada" });
+    }
 
     return res.status(200).json({
       ok: true,
+      msg: "Estado de cita actualizado",
       data: result.rows[0]
     });
 
@@ -130,10 +143,43 @@ export const obtenerCitas = async (req, res) => {
   try {
     const db = getConnection();
 
-    const query = "SELECT * FROM sp_obtenerCitas($1);";
-    const result = await db.query(query, [
-      estadoCita === undefined ? null : estadoCita
-    ]);
+    let query = `
+      SELECT 
+        uc.idusuariocita,
+        uc.idusuario,
+        uc.idcita,
+        uc.estadocita,
+        c.idtratamiento,
+        c.horasolicitud,
+        c.fechasolicitud,
+        t.nombretratamiento,
+        t.descripciontratamiento,
+        t.preciotratamiento,
+        t.imagenurl,
+        u.nombre,
+        u.apellido,
+        u.telefono,
+        u.email
+      FROM usuarioxcita uc
+      INNER JOIN cita c ON uc.idcita = c.idcita
+      INNER JOIN tratamiento t ON c.idtratamiento = t.idtratamiento
+      INNER JOIN usuario u ON uc.idusuario = u.idusuario
+    `;
+
+    const params = [];
+    
+    if (estadoCita !== undefined && estadoCita !== null) {
+      if (estadoCita === 'null' || estadoCita === 'NULL') {
+        query += ' WHERE uc.estadocita IS NULL';
+      } else {
+        query += ' WHERE uc.estadocita = $1';
+        params.push(estadoCita === 'true' || estadoCita === true);
+      }
+    }
+    
+    query += ' ORDER BY c.fechasolicitud DESC, c.horasolicitud DESC';
+
+    const result = await db.query(query, params);
 
     return res.status(200).json({
       ok: true,
