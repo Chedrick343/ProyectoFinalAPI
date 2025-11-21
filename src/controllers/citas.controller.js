@@ -39,22 +39,84 @@ export const crearSolicitudCita = async (req, res) => {
     }
 
     const db = getConnection();
-    const query = "SELECT * FROM sp_crearSolicitudCita($1, $2, $3, $4);";
-    const result = await db.query(query, [
-      idUsuario,
-      idTratamiento,
-      horaSolicitud,
-      fechaSolicitud
-    ]);
-
-    return res.status(201).json({
-      ok: true,
-      data: result.rows[0]
-    });
+    
+    // Validar que el usuario existe
+    const userCheck = await db.query(
+      'SELECT idusuario FROM usuario WHERE idusuario = $1',
+      [idUsuario]
+    );
+    
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ ok: false, msg: "Usuario no encontrado" });
+    }
+    
+    // Validar que el tratamiento existe
+    const treatmentCheck = await db.query(
+      'SELECT idtratamiento FROM tratamiento WHERE idtratamiento = $1',
+      [idTratamiento]
+    );
+    
+    if (treatmentCheck.rows.length === 0) {
+      return res.status(404).json({ ok: false, msg: "Tratamiento no encontrado" });
+    }
+    
+    // Comenzar transacción
+    await db.query('BEGIN');
+    
+    try {
+      // 1. Crear la cita
+      const citaQuery = `
+        INSERT INTO cita (idtratamiento, horasolicitud, fechasolicitud)
+        VALUES ($1, $2, $3)
+        RETURNING idcita
+      `;
+      
+      const citaResult = await db.query(citaQuery, [
+        idTratamiento,
+        horaSolicitud,
+        fechaSolicitud
+      ]);
+      
+      const idCita = citaResult.rows[0].idcita;
+      
+      // 2. Crear el registro usuarioxcita con estadocita = null (pendiente)
+      const usuarioCitaQuery = `
+        INSERT INTO usuarioxcita (idusuario, idcita, estadocita)
+        VALUES ($1, $2, NULL)
+        RETURNING idusuariocita, idusuario, idcita, estadocita
+      `;
+      
+      const usuarioCitaResult = await db.query(usuarioCitaQuery, [
+        idUsuario,
+        idCita
+      ]);
+      
+      // Confirmar transacción
+      await db.query('COMMIT');
+      
+      return res.status(201).json({
+        ok: true,
+        msg: "Cita solicitada exitosamente",
+        data: {
+          idcita: idCita,
+          idusuariocita: usuarioCitaResult.rows[0].idusuariocita,
+          estadocita: null
+        }
+      });
+      
+    } catch (error) {
+      // Revertir transacción en caso de error
+      await db.query('ROLLBACK');
+      throw error;
+    }
 
   } catch (error) {
     console.error("Error crearSolicitudCita:", error);
-    return res.status(500).json({ ok: false, msg: "Error en servidor", detalle: error.message });
+    return res.status(500).json({ 
+      ok: false, 
+      msg: "Error al crear la solicitud de cita", 
+      detalle: error.message 
+    });
   }
 };
 
