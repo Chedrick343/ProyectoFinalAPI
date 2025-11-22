@@ -378,6 +378,10 @@ export const obtenerCalendarioCitas = async (req, res) => {
     const { fechaInicio, fechaFin } = req.query;
     const db = getConnection();
 
+    console.log('=== obtenerCalendarioCitas ===');
+    console.log('fechaInicio:', fechaInicio);
+    console.log('fechaFin:', fechaFin);
+
     let query = `
       SELECT 
         uc.idusuariocita,
@@ -414,7 +418,12 @@ export const obtenerCalendarioCitas = async (req, res) => {
 
     query += ` ORDER BY c.fechasolicitud ASC, c.horasolicitud ASC`;
 
+    console.log('Query SQL:', query);
+    console.log('Params:', params);
+
     const result = await db.query(query, params);
+    
+    console.log('Resultados encontrados:', result.rows.length);
 
     return res.status(200).json({
       ok: true,
