@@ -443,20 +443,39 @@ export const obtenerCalendarioCitas = async (req, res) => {
 /**
  * Generar factura para una cita
  * Valida que la cita no tenga factura previa
+ * Usa Colones por defecto si no se especifica moneda
  */
 export const generarFacturaCita = async (req, res) => {
   try {
-    const { idusuariocita, idmoneda } = req.body;
+    const { idusuariocita } = req.body;
+    let { idmoneda } = req.body;
 
     // Validar parámetros requeridos
-    if (!idusuariocita || !idmoneda) {
+    if (!idusuariocita) {
       return res.status(400).json({
         ok: false,
-        msg: "idusuariocita e idmoneda son requeridos"
+        msg: "idusuariocita es requerido"
       });
     }
 
     const db = getConnection();
+
+    // Si no se especifica moneda, usar Colones por defecto
+    if (!idmoneda) {
+      const monedaQuery = await db.query(`
+        SELECT idmoneda FROM moneda WHERE nombremoneda = 'Colones' LIMIT 1
+      `);
+      
+      if (monedaQuery.rows.length === 0) {
+        return res.status(500).json({
+          ok: false,
+          msg: "No se encontró la moneda Colones en el sistema"
+        });
+      }
+      
+      idmoneda = monedaQuery.rows[0].idmoneda;
+      console.log("[FACTURA] Usando Colones por defecto:", idmoneda);
+    }
 
     // Verificar que la cita existe y está aprobada
     const citaCheck = await db.query(`
@@ -496,18 +515,6 @@ export const generarFacturaCita = async (req, res) => {
         ok: false,
         msg: "Esta cita ya tiene una factura generada",
         idfacturacita: facturaCheck.rows[0].idfacturacita
-      });
-    }
-
-    // Verificar que la moneda existe
-    const monedaCheck = await db.query(`
-      SELECT idmoneda FROM moneda WHERE idmoneda = $1
-    `, [idmoneda]);
-
-    if (monedaCheck.rows.length === 0) {
-      return res.status(404).json({
-        ok: false,
-        msg: "Moneda no encontrada"
       });
     }
 

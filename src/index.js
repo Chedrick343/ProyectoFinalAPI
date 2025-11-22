@@ -7,6 +7,7 @@ import carritoRoutes from "./routes/carrito.route.js";
 import tratamientosRoutes from "./routes/tratamientos.route.js";
 import uploadRoutes from "./routes/upload.route.js";
 import { initializeRoles } from "./services/role.service.js";
+import { initializeMonedas } from "./services/moneda.service.js";
 
 const app = express();
 
@@ -22,11 +23,12 @@ app.use("/carrito", carritoRoutes);
 app.use("/tratamientos", tratamientosRoutes);
 app.use("/upload", uploadRoutes);
 
-// Inicializar roles al arrancar el servidor
+// Inicializar roles y monedas al arrancar el servidor
 const initializeApp = async () => {
     try {
         console.log("[INIT] Inicializando aplicación...");
         await initializeRoles();
+        await initializeMonedas();
         console.log("[INIT] Aplicación inicializada correctamente");
     } catch (error) {
         console.error("[INIT] Error al inicializar aplicación:", error);
