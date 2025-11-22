@@ -7,20 +7,45 @@ export const actualizarCantidad = async (req, res) => {
   const { idCarrito, idProducto, nuevaCantidad } = req.body;
 
   try {
+    console.log("📦 actualizarCantidad - Datos recibidos:", { idCarrito, idProducto, nuevaCantidad });
+    
     if (!idCarrito || !idProducto || nuevaCantidad === undefined) {
       return res.status(400).json({ ok: false, msg: "Datos incompletos" });
     }
 
+    if (nuevaCantidad < 1) {
+      return res.status(400).json({ ok: false, msg: "La cantidad debe ser mayor a 0" });
+    }
+
     const db = getConnection();
+
+    // El idCarrito que llega es en realidad el userId
+    const userId = idCarrito;
+    
+    // Obtener el carrito del usuario
+    const getCarritoQuery = `
+      SELECT idcarrito FROM carrito WHERE idusuario = $1
+    `;
+    console.log("🔍 Buscando carrito para usuario:", userId);
+    const carritoResult = await db.query(getCarritoQuery, [userId]);
+    
+    if (carritoResult.rows.length === 0) {
+      console.log("❌ Carrito no encontrado para usuario:", userId);
+      return res.status(404).json({ ok: false, msg: "Carrito no encontrado" });
+    }
+    
+    const carritoId = carritoResult.rows[0].idcarrito;
+    console.log("✅ Carrito encontrado con ID:", carritoId);
 
     // Verificar que el producto existe en el carrito
     const checkQuery = `
       SELECT * FROM carritoxproducto 
       WHERE idcarrito = $1 AND idproducto = $2
     `;
-    const checkResult = await db.query(checkQuery, [idCarrito, idProducto]);
+    const checkResult = await db.query(checkQuery, [carritoId, idProducto]);
 
     if (checkResult.rows.length === 0) {
+      console.log("❌ Producto no encontrado en el carrito");
       return res.status(404).json({ ok: false, msg: "Producto no encontrado en el carrito" });
     }
 
@@ -31,7 +56,8 @@ export const actualizarCantidad = async (req, res) => {
       WHERE idcarrito = $2 AND idproducto = $3
       RETURNING *
     `;
-    const result = await db.query(updateQuery, [nuevaCantidad, idCarrito, idProducto]);
+    const result = await db.query(updateQuery, [nuevaCantidad, carritoId, idProducto]);
+    console.log("✅ Cantidad actualizada:", result.rows[0]);
 
     return res.status(200).json({
       ok: true,
@@ -40,7 +66,8 @@ export const actualizarCantidad = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error actualizarCantidad:", error);
+    console.error("❌ Error actualizarCantidad:", error);
+    console.error("Stack trace:", error.stack);
     return res.status(500).json({ ok: false, msg: "Error en servidor", detalle: error.message });
   }
 };
@@ -211,23 +238,45 @@ export const quitarDeCarrito = async (req, res) => {
   const { idCarrito, idProducto } = req.body;
 
   try {
+    console.log("📦 quitarDeCarrito - Datos recibidos:", { idCarrito, idProducto });
+    
     if (!idCarrito || !idProducto) {
       return res.status(400).json({ ok: false, msg: "Datos incompletos" });
     }
 
     const db = getConnection();
 
+    // El idCarrito que llega es en realidad el userId
+    const userId = idCarrito;
+    
+    // Obtener el carrito del usuario
+    const getCarritoQuery = `
+      SELECT idcarrito FROM carrito WHERE idusuario = $1
+    `;
+    console.log("🔍 Buscando carrito para usuario:", userId);
+    const carritoResult = await db.query(getCarritoQuery, [userId]);
+    
+    if (carritoResult.rows.length === 0) {
+      console.log("❌ Carrito no encontrado para usuario:", userId);
+      return res.status(404).json({ ok: false, msg: "Carrito no encontrado" });
+    }
+    
+    const carritoId = carritoResult.rows[0].idcarrito;
+    console.log("✅ Carrito encontrado con ID:", carritoId);
+
     const query = `
       DELETE FROM carritoxproducto 
       WHERE idcarrito = $1 AND idproducto = $2
       RETURNING *
     `;
-    const result = await db.query(query, [idCarrito, idProducto]);
+    const result = await db.query(query, [carritoId, idProducto]);
 
     if (result.rows.length === 0) {
+      console.log("❌ Producto no encontrado en el carrito");
       return res.status(404).json({ ok: false, msg: "Producto no encontrado en el carrito" });
     }
 
+    console.log("✅ Producto eliminado:", result.rows[0]);
     return res.status(200).json({
       ok: true,
       msg: "Producto eliminado del carrito",
@@ -235,7 +284,8 @@ export const quitarDeCarrito = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error quitarDeCarrito:", error);
+    console.error("❌ Error quitarDeCarrito:", error);
+    console.error("Stack trace:", error.stack);
     return res.status(500).json({ ok: false, msg: "Error en servidor", detalle: error.message });
   }
 };
