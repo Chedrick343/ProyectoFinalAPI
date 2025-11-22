@@ -447,26 +447,33 @@ export const obtenerCalendarioCitas = async (req, res) => {
  */
 export const generarFacturaCita = async (req, res) => {
   try {
+    console.log("[FACTURA] Iniciando generación de factura");
+    console.log("[FACTURA] Body recibido:", req.body);
+    
     const { idusuariocita } = req.body;
     let { idmoneda } = req.body;
 
     // Validar parámetros requeridos
     if (!idusuariocita) {
+      console.log("[FACTURA] Error: idusuariocita no proporcionado");
       return res.status(400).json({
         ok: false,
         msg: "idusuariocita es requerido"
       });
     }
 
+    console.log("[FACTURA] idusuariocita:", idusuariocita);
     const db = getConnection();
 
     // Si no se especifica moneda, usar Colones por defecto
     if (!idmoneda) {
+      console.log("[FACTURA] No se especificó moneda, buscando Colones...");
       const monedaQuery = await db.query(`
         SELECT idmoneda FROM moneda WHERE nombremoneda = 'Colones' LIMIT 1
       `);
       
       if (monedaQuery.rows.length === 0) {
+        console.log("[FACTURA] Error: No se encontró la moneda Colones");
         return res.status(500).json({
           ok: false,
           msg: "No se encontró la moneda Colones en el sistema"
@@ -478,6 +485,7 @@ export const generarFacturaCita = async (req, res) => {
     }
 
     // Verificar que la cita existe y está aprobada
+    console.log("[FACTURA] Verificando cita...");
     const citaCheck = await db.query(`
       SELECT 
         uc.idusuariocita,
@@ -489,14 +497,20 @@ export const generarFacturaCita = async (req, res) => {
       WHERE uc.idusuariocita = $1
     `, [idusuariocita]);
 
+    console.log("[FACTURA] Resultado de citaCheck:", citaCheck.rows);
+
     if (citaCheck.rows.length === 0) {
+      console.log("[FACTURA] Error: Cita no encontrada");
       return res.status(404).json({
         ok: false,
         msg: "Cita no encontrada"
       });
     }
 
+    console.log("[FACTURA] Estado de cita:", citaCheck.rows[0].estadocita, "Tipo:", typeof citaCheck.rows[0].estadocita);
+    
     if (citaCheck.rows[0].estadocita !== true) {
+      console.log("[FACTURA] Error: Cita no aprobada");
       return res.status(400).json({
         ok: false,
         msg: "Solo se pueden facturar citas aprobadas"
@@ -504,13 +518,17 @@ export const generarFacturaCita = async (req, res) => {
     }
 
     // Verificar que no tenga factura previa
+    console.log("[FACTURA] Verificando facturas previas...");
     const facturaCheck = await db.query(`
       SELECT idfacturacita
       FROM facturacita
       WHERE idusuariocita = $1
     `, [idusuariocita]);
 
+    console.log("[FACTURA] Facturas existentes:", facturaCheck.rows.length);
+
     if (facturaCheck.rows.length > 0) {
+      console.log("[FACTURA] Error: Ya existe factura");
       return res.status(400).json({
         ok: false,
         msg: "Esta cita ya tiene una factura generada",
@@ -519,8 +537,12 @@ export const generarFacturaCita = async (req, res) => {
     }
 
     const precioTratamiento = citaCheck.rows[0].preciotratamiento;
+    console.log("[FACTURA] Precio del tratamiento:", precioTratamiento);
 
     // Crear la factura
+    console.log("[FACTURA] Insertando factura...");
+    console.log("[FACTURA] Parámetros: idusuariocita:", idusuariocita, "idmoneda:", idmoneda, "total:", precioTratamiento);
+    
     const insertQuery = `
       INSERT INTO facturacita (idusuariocita, idmoneda, total)
       VALUES ($1, $2, $3)
@@ -533,6 +555,8 @@ export const generarFacturaCita = async (req, res) => {
       precioTratamiento
     ]);
 
+    console.log("[FACTURA] Factura creada exitosamente:", result.rows[0]);
+
     return res.status(201).json({
       ok: true,
       msg: "Factura generada exitosamente",
@@ -541,10 +565,12 @@ export const generarFacturaCita = async (req, res) => {
 
   } catch (error) {
     console.error("Error generarFacturaCita:", error);
+    console.error("Stack trace:", error.stack);
     return res.status(500).json({
       ok: false,
       msg: "Error al generar la factura",
-      detalle: error.message
+      detalle: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
