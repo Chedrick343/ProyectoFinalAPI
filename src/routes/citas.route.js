@@ -7,7 +7,8 @@ import {
   obtenerCitasPendientes,
   aprobarCita,
   rechazarCita,
-  obtenerCalendarioCitas
+  obtenerCalendarioCitas,
+  generarFacturaCita
 } from "../controllers/citas.controller.js";
 
 const router = Router();
@@ -23,5 +24,6 @@ router.get("/admin/pendientes", obtenerCitasPendientes);
 router.get("/admin/calendario", obtenerCalendarioCitas);
 router.put("/admin/:idUsuarioCita/aprobar", aprobarCita);
 router.put("/admin/:idUsuarioCita/rechazar", rechazarCita);
+router.post("/admin/facturas/generar", generarFacturaCita);
 
 export default router;

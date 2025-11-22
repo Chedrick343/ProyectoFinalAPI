@@ -371,6 +371,7 @@ export const rechazarCita = async (req, res) => {
 
 /**
  * Obtener calendario de citas aprobadas (para vista semanal/mensual)
+ * Incluye información de facturación (si ya tiene factura o no)
  */
 export const obtenerCalendarioCitas = async (req, res) => {
   try {
@@ -387,11 +388,14 @@ export const obtenerCalendarioCitas = async (req, res) => {
         t.preciotratamiento,
         u.nombre,
         u.apellido,
-        u.telefono
+        u.telefono,
+        fc.idfacturacita,
+        CASE WHEN fc.idfacturacita IS NOT NULL THEN true ELSE false END as tiene_factura
       FROM usuarioxcita uc
       INNER JOIN cita c ON uc.idcita = c.idcita
       INNER JOIN tratamiento t ON c.idtratamiento = t.idtratamiento
       INNER JOIN usuario u ON uc.idusuario = u.idusuario
+      LEFT JOIN facturacita fc ON uc.idusuariocita = fc.idusuariocita
       WHERE uc.estadocita = true
     `;
 
@@ -422,6 +426,108 @@ export const obtenerCalendarioCitas = async (req, res) => {
     return res.status(500).json({
       ok: false,
       msg: "Error al obtener calendario de citas",
+      detalle: error.message
+    });
+  }
+};
+
+/**
+ * Generar factura para una cita
+ * Valida que la cita no tenga factura previa
+ */
+export const generarFacturaCita = async (req, res) => {
+  try {
+    const { idusuariocita, idmoneda } = req.body;
+
+    // Validar parámetros requeridos
+    if (!idusuariocita || !idmoneda) {
+      return res.status(400).json({
+        ok: false,
+        msg: "idusuariocita e idmoneda son requeridos"
+      });
+    }
+
+    const db = getConnection();
+
+    // Verificar que la cita existe y está aprobada
+    const citaCheck = await db.query(`
+      SELECT 
+        uc.idusuariocita,
+        uc.estadocita,
+        t.preciotratamiento
+      FROM usuarioxcita uc
+      INNER JOIN cita c ON uc.idcita = c.idcita
+      INNER JOIN tratamiento t ON c.idtratamiento = t.idtratamiento
+      WHERE uc.idusuariocita = $1
+    `, [idusuariocita]);
+
+    if (citaCheck.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Cita no encontrada"
+      });
+    }
+
+    if (citaCheck.rows[0].estadocita !== true) {
+      return res.status(400).json({
+        ok: false,
+        msg: "Solo se pueden facturar citas aprobadas"
+      });
+    }
+
+    // Verificar que no tenga factura previa
+    const facturaCheck = await db.query(`
+      SELECT idfacturacita
+      FROM facturacita
+      WHERE idusuariocita = $1
+    `, [idusuariocita]);
+
+    if (facturaCheck.rows.length > 0) {
+      return res.status(400).json({
+        ok: false,
+        msg: "Esta cita ya tiene una factura generada",
+        idfacturacita: facturaCheck.rows[0].idfacturacita
+      });
+    }
+
+    // Verificar que la moneda existe
+    const monedaCheck = await db.query(`
+      SELECT idmoneda FROM moneda WHERE idmoneda = $1
+    `, [idmoneda]);
+
+    if (monedaCheck.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Moneda no encontrada"
+      });
+    }
+
+    const precioTratamiento = citaCheck.rows[0].preciotratamiento;
+
+    // Crear la factura
+    const insertQuery = `
+      INSERT INTO facturacita (idusuariocita, idmoneda, total)
+      VALUES ($1, $2, $3)
+      RETURNING idfacturacita, idusuariocita, idmoneda, total
+    `;
+
+    const result = await db.query(insertQuery, [
+      idusuariocita,
+      idmoneda,
+      precioTratamiento
+    ]);
+
+    return res.status(201).json({
+      ok: true,
+      msg: "Factura generada exitosamente",
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error("Error generarFacturaCita:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Error al generar la factura",
       detalle: error.message
     });
   }
