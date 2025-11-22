@@ -8,7 +8,8 @@ import {
   aprobarCita,
   rechazarCita,
   obtenerCalendarioCitas,
-  generarFacturaCita
+  generarFacturaCita,
+  pagarCita
 } from "../controllers/citas.controller.js";
 
 const router = Router();
@@ -18,6 +19,7 @@ router.put("/estado", cambiarEstadoCita);
 router.post("/crear", crearSolicitudCita);
 router.get("/", obtenerCitas);
 router.get("/usuario/:idUsuario", obtenerCitasUsuario);
+router.post("/pagar", pagarCita);
 
 // ========== Rutas de administrador ==========
 router.get("/admin/pendientes", obtenerCitasPendientes);

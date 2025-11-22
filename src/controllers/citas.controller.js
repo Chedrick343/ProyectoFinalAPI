@@ -574,3 +574,149 @@ export const generarFacturaCita = async (req, res) => {
     });
   }
 };
+
+/**
+ * Pagar una cita desde la app del cliente
+ * Valida que la cita no haya sido pagada previamente
+ * Genera automáticamente la factura en Colones
+ */
+export const pagarCita = async (req, res) => {
+  try {
+    console.log("[PAGO] Iniciando pago de cita");
+    console.log("[PAGO] Body recibido:", req.body);
+    
+    const { idusuariocita } = req.body;
+
+    // Validar parámetros requeridos
+    if (!idusuariocita) {
+      console.log("[PAGO] Error: idusuariocita no proporcionado");
+      return res.status(400).json({
+        ok: false,
+        msg: "idusuariocita es requerido"
+      });
+    }
+
+    console.log("[PAGO] idusuariocita:", idusuariocita);
+    const db = getConnection();
+
+    // Verificar que la cita existe y está aprobada
+    console.log("[PAGO] Verificando cita...");
+    const citaCheck = await db.query(`
+      SELECT 
+        uc.idusuariocita,
+        uc.estadocita,
+        t.preciotratamiento,
+        t.nombretratamiento,
+        c.fechacita,
+        c.horacita,
+        u.nombre || ' ' || u.apellido as cliente
+      FROM usuarioxcita uc
+      INNER JOIN cita c ON uc.idcita = c.idcita
+      INNER JOIN tratamiento t ON c.idtratamiento = t.idtratamiento
+      INNER JOIN usuario u ON uc.idusuario = u.idusuario
+      WHERE uc.idusuariocita = $1
+    `, [idusuariocita]);
+
+    console.log("[PAGO] Resultado de citaCheck:", citaCheck.rows);
+
+    if (citaCheck.rows.length === 0) {
+      console.log("[PAGO] Error: Cita no encontrada");
+      return res.status(404).json({
+        ok: false,
+        msg: "Cita no encontrada"
+      });
+    }
+
+    console.log("[PAGO] Estado de cita:", citaCheck.rows[0].estadocita);
+    
+    if (citaCheck.rows[0].estadocita !== true) {
+      console.log("[PAGO] Error: Cita no aprobada");
+      return res.status(400).json({
+        ok: false,
+        msg: "Solo se pueden pagar citas aprobadas"
+      });
+    }
+
+    // Verificar que no tenga factura/pago previo
+    console.log("[PAGO] Verificando pagos previos...");
+    const facturaCheck = await db.query(`
+      SELECT idfacturacita
+      FROM facturacita
+      WHERE idusuariocita = $1
+    `, [idusuariocita]);
+
+    console.log("[PAGO] Facturas existentes:", facturaCheck.rows.length);
+
+    if (facturaCheck.rows.length > 0) {
+      console.log("[PAGO] Error: Ya existe pago/factura");
+      return res.status(400).json({
+        ok: false,
+        msg: "Esta cita ya ha sido pagada",
+        idfacturacita: facturaCheck.rows[0].idfacturacita
+      });
+    }
+
+    // Obtener ID de Colones (moneda por defecto)
+    console.log("[PAGO] Buscando moneda Colones...");
+    const monedaQuery = await db.query(`
+      SELECT idmoneda FROM moneda WHERE nombremoneda = 'Colones' LIMIT 1
+    `);
+    
+    if (monedaQuery.rows.length === 0) {
+      console.log("[PAGO] Error: No se encontró moneda Colones");
+      return res.status(500).json({
+        ok: false,
+        msg: "No se encontró la moneda Colones en el sistema"
+      });
+    }
+    
+    const idmoneda = monedaQuery.rows[0].idmoneda;
+    console.log("[PAGO] Usando Colones:", idmoneda);
+
+    const precioTratamiento = citaCheck.rows[0].preciotratamiento;
+    console.log("[PAGO] Precio del tratamiento:", precioTratamiento);
+
+    // Crear la factura (registro del pago)
+    console.log("[PAGO] Insertando factura...");
+    
+    const insertQuery = `
+      INSERT INTO facturacita (idusuariocita, idmoneda, total)
+      VALUES ($1, $2, $3)
+      RETURNING idfacturacita, idusuariocita, idmoneda, total
+    `;
+
+    const result = await db.query(insertQuery, [
+      idusuariocita,
+      idmoneda,
+      precioTratamiento
+    ]);
+
+    console.log("[PAGO] Pago registrado exitosamente:", result.rows[0]);
+
+    // Retornar información completa del pago
+    return res.status(201).json({
+      ok: true,
+      msg: "Pago procesado exitosamente",
+      data: {
+        factura: result.rows[0],
+        cita: {
+          tratamiento: citaCheck.rows[0].nombretratamiento,
+          fecha: citaCheck.rows[0].fechacita,
+          hora: citaCheck.rows[0].horacita,
+          cliente: citaCheck.rows[0].cliente,
+          precio: precioTratamiento
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("Error pagarCita:", error);
+    console.error("Stack trace:", error.stack);
+    return res.status(500).json({
+      ok: false,
+      msg: "Error al procesar el pago",
+      detalle: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
